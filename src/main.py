@@ -15,6 +15,15 @@ from googleapiclient.errors import HttpError
 
 
 class CalendarGoogle:
+	@staticmethod
+	def is_date_format(date):
+		try:
+			datetime.datetime.strptime(date, '%d/%m/%Y')
+			return True
+		except ValueError:
+			print("Incorrect data format, should be DD/MM/YYYY")
+			return False
+		
 	def __init__(self):
 		self.SCOPES = ['https://www.googleapis.com/auth/calendar']
 		
@@ -58,22 +67,41 @@ class CalendarGoogle:
 		self.IDCalendar = [cal['id'] for cal in self.calendar_list['items'] if cal['summary'] == self.CalName][0]
 		if self.IDCalendar == '':
 			print('No calendar found')
-	def GetEvents(self):
+	def GetEvents(self, from_date, to_date):
+		self.events = []
+		if not self.is_date_format(from_date) or not self.is_date_format(to_date):
+			return
+		from_date = datetime.datetime.strptime(from_date, '%d/%m/%Y').isoformat() + 'Z'
+		to_date = datetime.datetime.strptime(to_date, '%d/%m/%Y').isoformat() + 'Z'
+
+		if to_date<from_date:
+			print('to_date must be after from_date')
+			return
+		from_date = datetime.datetime.utcnow().isoformat() + 'Z'
 		if self.IDCalendar == '':
 			print('No calendar found')
 			print('Please use GetIDCalendar()')
 		else:
-			self.events_result = self.service.events().list(calendarId=self.IDCalendar, timeMin=datetime.datetime.utcnow().isoformat() + 'Z',
-												maxResults=10, singleEvents=True,
+			self.events_result = self.service.events().list(calendarId=self.IDCalendar, timeMin=from_date,
+											timeMax=to_date, singleEvents=True,
 												orderBy='startTime').execute()
-			self.events = self.events_result.get('items', [])
-			if not self.events:
+			self.events_items = self.events_result.get('items', [])
+			if not self.events_items:
 				print('No upcoming events found.')
-			for event in self.events:
+			for event in self.events_items:
 				start = event['start'].get('dateTime', event['start'].get('date'))
-				start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S%z')
+				if len(start) == 10 and start.count('-') == 2:
+					start = datetime.date.fromisoformat(start)
+				elif len(start) >= 19 and start[10] == 'T' and start.count('-') == 2 and start.count(':') >= 2:
+					start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S%z')
+				else:
+					print("Format non reconnu :", start)
+					#renvoi une erreur
+					return
+
 				start = start.strftime('%d/%m/%Y %H:%M')
-				print(f'{self.CalName} : {start} ==> {event["summary"]}')
+				self.events.append((start, event['summary']))
+				# print(f'{self.CalName} : {start} ==> {event["summary"]}')
 	def CreateEvent(self, name, start, end, description = ''):
 		event = {
 			'summary': name,
@@ -112,13 +140,13 @@ def main():
 	CalJerome = CalendarGoogle()
 	CalJerome.GetListCalendar()
 	CalJerome.GetIDCalendar('Garde Alternee')
-	CalJerome.GetEvents()
+	CalJerome.GetEvents("01/09/2023", "30/09/2023")
 	CalElise = CalendarGoogle()
 	CalElise.GetListCalendar()
 	CalElise.GetIDCalendar('Garde Elise')
-	CalElise.CreateEvent('Test2', '2023-09-18T10:00:00+02:00', '2023-09-18T11:00:00+02:00', 'Description test')
-	CalElise.GetEvents()
-
+	# CalElise.CreateEvent('Test2', '2023-09-18T10:00:00+02:00', '2023-09-18T11:00:00+02:00', 'Description test')
+	CalElise.GetEvents("01/09/2023", "30/09/2023")
+	print(CalJerome.events_result)
 
 
 if __name__ == '__main__':
