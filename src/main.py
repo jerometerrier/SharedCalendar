@@ -23,8 +23,9 @@ def is_date_format(date):
 
 class CalendarGoogle:
 		
-	def __init__(self):
+	def __init__(self, CalendarName):
 		self.SCOPES = ['https://www.googleapis.com/auth/calendar']
+		self.CalendarName = CalendarName
 		
 		"""Shows basic usage of the Google Calendar API.
 		Prints the start and name of the next 10 events on the user's calendar.
@@ -46,6 +47,8 @@ class CalendarGoogle:
 			# Save the credentials for the next run
 			with open('token.json', 'w') as token:
 				token.write(self.creds.to_json())
+		self.GetIDCalendar()
+		
 	def GetListCalendar(self, verbose = False):
 		try:
 			self.service = build('calendar', 'v3', credentials=self.creds)
@@ -60,10 +63,9 @@ class CalendarGoogle:
 				# 		break
 		except HttpError as error:
 			print('An error occurred: %s' % error)
-	def GetIDCalendar(self, name):
+	def GetIDCalendar(self):
 		self.GetListCalendar()
-		self.CalName = name
-		self.IDCalendar = [cal['id'] for cal in self.calendar_list['items'] if cal['summary'] == self.CalName][0]
+		self.IDCalendar = [cal['id'] for cal in self.calendar_list['items'] if cal['summary'] == self.CalendarName][0]
 		if self.IDCalendar == '':
 			print('No calendar found')
 	def GetEvents(self, start_date, end_date):
@@ -148,7 +150,9 @@ class CalendarGoogle:
 
 
 class CalendrierGarde:
-	def __init__(self):
+	def __init__(self, calendar1 = None, calendar2 = None):
+		self.calendar1 = calendar1
+		self.calendar2 = calendar2
 		self.first_day = None
 		self.Day1 = None
 		self.Day2 = None
@@ -166,7 +170,7 @@ class CalendrierGarde:
 		self.Day14 = None
 
 		pass
-	def DeuxTroisDeux(self, first_day, calendar1, calendar2):
+	def DeuxTroisDeux(self, first_day):
 		if not is_date_format(first_day):
 			return
 		first_day = datetime.datetime.strptime(first_day, '%d/%m/%Y')
@@ -186,20 +190,20 @@ class CalendrierGarde:
 		self.Day14 = first_day + datetime.timedelta(days=13)
 
 
-		self.Day1Cal = calendar1
-		self.Day2Cal = calendar1
-		self.Day3Cal = calendar2
-		self.Day4Cal = calendar2
-		self.Day5Cal = calendar2
-		self.Day6Cal = calendar1
-		self.Day7Cal = calendar1
-		self.Day8Cal = calendar2
-		self.Day9Cal = calendar2
-		self.Day10Cal = calendar1
-		self.Day11Cal = calendar1
-		self.Day12Cal = calendar1
-		self.Day13Cal = calendar2
-		self.Day14Cal = calendar2
+		self.Day1Cal = self.calendar1
+		self.Day2Cal = self.calendar1
+		self.Day3Cal = self.calendar2
+		self.Day4Cal = self.calendar2
+		self.Day5Cal = self.calendar2
+		self.Day6Cal = self.calendar1
+		self.Day7Cal = self.calendar1
+		self.Day8Cal = self.calendar2
+		self.Day9Cal = self.calendar2
+		self.Day10Cal = self.calendar1
+		self.Day11Cal = self.calendar1
+		self.Day12Cal = self.calendar1
+		self.Day13Cal = self.calendar2
+		self.Day14Cal = self.calendar2
 	
 	def showCalendrier(self):
 		print(f"Jour 1 : {self.Day1}")
@@ -237,28 +241,36 @@ class CalendrierGarde:
 
 			cal[0].CreateEvent('Garde', start_date, end_date, 'Garde alternee')
 	
-	def checkIntregrity(self):
-		pass
+	def checkIntregrity(self, start_date, end_date):
+		if not is_date_format(start_date) or not is_date_format(end_date):
+			return
+		if end_date<start_date:
+			print('to_date must be after from_date')
+			return
+		else:
+			self.calendar1.GetEvents(start_date, end_date)
+			self.calendar2.GetEvents(start_date, end_date)
+
+
+
+		
 		
 		
 
 	
 def main():
-	CalJerome = CalendarGoogle()
-	CalJerome.GetListCalendar()
-	CalJerome.GetIDCalendar('Garde Alternee')
-	CalJerome.GetEvents("01/09/2023", "18/09/2023")
-	CalElise = CalendarGoogle()
-	CalElise.GetListCalendar()
-	CalElise.GetIDCalendar('Garde Elise')
-	# CalElise.CreateEvent('Test2', '2023-09-18T10:00:00+02:00', '2023-09-18T11:00:00+02:00', 'Description test')
-	CalElise.GetEvents("01/09/2023", "18/09/2023")
+	CalJerome = CalendarGoogle('Garde Alternee')
+	CalElise = CalendarGoogle('Garde Elise')
+	# CalJerome.GetEvents("01/09/2023", "18/09/2023")
+	# # CalElise.CreateEvent('Test2', '2023-09-18T10:00:00+02:00', '2023-09-18T11:00:00+02:00', 'Description test')
+	# CalElise.GetEvents("01/09/2023", "18/09/2023")
 	# print(CalJerome.events)
 	# CalElise.DeleteAllEvents("01/09/2023", "18/09/2023", "Garde")
-	calendrier = CalendrierGarde()
-	calendrier.DeuxTroisDeux("01/09/2023", CalJerome, CalElise)
+	calendrier = CalendrierGarde(CalJerome, CalElise)
+	calendrier.DeuxTroisDeux("01/09/2023")
 	# calendrier.showCalendrier()
-	calendrier.createDefaultEvent()
+	# calendrier.createDefaultEvent()
+	calendrier.checkIntregrity("01/09/2023", "18/09/2023")
 
 
 
